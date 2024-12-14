@@ -19,6 +19,10 @@ Section "MainSection"
         StrCpy $1 "$TEMP\vcpp_aio.exe"
         inetc::get /URL $0 $1
         
+        
+        pop $R0
+        DetailPrint "Result: $R0"
+
         Pop $2 ; Get the result of the download
 
         ; Check for download errors
