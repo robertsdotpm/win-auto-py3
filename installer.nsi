@@ -31,6 +31,11 @@ Function InstallVistaPython
     Call DLRun
 FunctionEnd
 
+Function InstallXPPython
+    StrCpy $0 "http://88.99.211.216/win-auto-py3/win_xp/python_3_5_x86.zip"
+    StrCpy $1 "python3.zip"
+FunctionEnd
+
 Section "MainSection"
     StrCpy $SysDrive $WINDIR 2
     
@@ -44,4 +49,12 @@ Section "MainSection"
         Call InstallAIORedist
         Call InstallVistaPython
     ${EndIf}
+	
+	# Windows XP
+    ${If} $WinVerMajor == 5
+    ${AndIf} $WinVerMinor == 1
+        Call InstallAIORedist
+        Call InstallVistaPython
+    ${EndIf}
+	
 SectionEnd
