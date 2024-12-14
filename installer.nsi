@@ -13,7 +13,8 @@ Section "MainSection"
     ${WinVerGetMinor} $WinVerMinor
     
     ; On Vista install C++ redist AIO.
-    ${If} $WinVerMajor == 6 && $WinVerMinor == 0
+    ${If} $WinVerMajor == 6
+    ${AndIf} $WinVerMinor == 0
         StrCpy $0 "https://roberts.pm/win-auto-py3/generic/VisualCppRedist_AIO_x86_x64.exe"
         StrCpy $1 "$TEMP\vcpp_aio.exe"
         inetc::get /URL $0 $1
