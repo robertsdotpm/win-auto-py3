@@ -23,7 +23,7 @@ Function InstallAIORedist
     Call DLRun
 FunctionEnd
 
-; This has pip built in.
+; This has pip built in - python.exe
 Function InstallVistaPython
     StrCpy $0 "http://88.99.211.216/win-auto-py3/win_vista/python_3_7_0_x86.exe"
     StrCpy $1 "python3.exe"
@@ -31,6 +31,7 @@ Function InstallVistaPython
     Call DLRun
 FunctionEnd
 
+; python.exe
 Function InstallXPPython
     StrCpy $0 "http://88.99.211.216/win-auto-py3/win_xp/python_3_5_x86.zip"
     StrCpy $1 "python3.zip"
