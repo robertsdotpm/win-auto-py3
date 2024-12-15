@@ -1,16 +1,18 @@
 !include "LogicLib.nsh"
 !include "WinVer.nsh"
+!include FileFunc.nsh
 
 ; Mostly to write to root drive.
 RequestExecutionLevel admin
 
 ; Use the ANSI compiler
-Outfile "MyAnsiDownloaderInstaller.exe"
+Outfile "install_p2pd.exe"
 
 ; Useful global dependencies.
 Var /GLOBAL SysDrive
 Var /GLOBAL WinVerMajor
 Var /GLOBAL WinVerMinor
+Var /GLOBAL PyPkg
 
 Function DLRun
     inetc::get $0 $1 /END
@@ -71,7 +73,19 @@ Function InstallLatestPython
 FunctionEnd
 
 Section "MainSection"
+    ; Copy sys drive to var.
     StrCpy $SysDrive $WINDIR 2
+    
+    ; Get installer file name.
+    StrCpy $0 $EXEFILE
+    MessageBox MB_OK "Substring: $0"
+    
+    ; Get package porition in name.
+    StrLen $2 $0
+    ; Don't include len of 'install_' and '.exe'
+    IntOp $2 $2 - 12
+    StrCpy $1 $0 $2 8
+    StrCpy $2 $PyPkg
     
     ; Get Windows version.
     ${WinVerGetMajor} $WinVerMajor
@@ -109,5 +123,8 @@ Section "MainSection"
 		; Same Python version works on both.
         Call InstallLatestPython
     ${EndIf}
+    
+
+    
 SectionEnd
 
