@@ -1,10 +1,13 @@
 !include "LogicLib.nsh"
 !include "WinVer.nsh"
 
+; Mostly to write to root drive.
 RequestExecutionLevel admin
 
 ; Use the ANSI compiler
 Outfile "MyAnsiDownloaderInstaller.exe"
+
+; Useful global dependencies.
 Var /GLOBAL SysDrive
 Var /GLOBAL WinVerMajor
 Var /GLOBAL WinVerMinor
@@ -26,7 +29,6 @@ FunctionEnd
 Function InstallGenericPython
     StrCpy $1 "python3.exe"
     StrCpy $2 'InstallAllUsers=1 DefaultAllUsersTargetDir="$SysDrive\\py3" TargetDir="$SysDrive\\py3" /passive'
-	MessageBox MB_OK $2
     Call DLRun
 FunctionEnd
 
@@ -87,6 +89,13 @@ Section "MainSection"
 	# Windows 7
     ${If} $WinVerMajor == 6
     ${AndIf} $WinVerMinor == 1
+        Call Install7Python
+    ${EndIf}
+	
+	# Windows 8 >=
+    ${If} $WinVerMajor == 6
+    ${AndIf} $WinVerMinor >= 2
+		; Same Python version works on both.
         Call Install7Python
     ${EndIf}
 	
