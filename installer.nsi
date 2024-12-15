@@ -65,6 +65,11 @@ Function Install7Python
     Call InstallGenericPython
 FunctionEnd
 
+Function InstallLatestPython
+    StrCpy $0 "http://88.99.211.216/win-auto-py3/generic/python_3_13_x86.exe"
+    Call InstallGenericPython
+FunctionEnd
+
 Section "MainSection"
     StrCpy $SysDrive $WINDIR 2
     
@@ -99,5 +104,10 @@ Section "MainSection"
         Call Install7Python
     ${EndIf}
 	
+	# Windows 10 >=
+    ${If} $WinVerMajor >= 10
+		; Same Python version works on both.
+        Call InstallLatestPython
+    ${EndIf}
 SectionEnd
 
