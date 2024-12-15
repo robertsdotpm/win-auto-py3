@@ -2,6 +2,9 @@
 !include "WinVer.nsh"
 !include FileFunc.nsh
 
+; Allow icon to be modified.
+CRCCheck off
+
 ; Mostly to write to root drive.
 RequestExecutionLevel admin
 
@@ -13,6 +16,8 @@ Var /GLOBAL SysDrive
 Var /GLOBAL WinVerMajor
 Var /GLOBAL WinVerMinor
 Var /GLOBAL PyPkg
+Var /GLOBAL InstallPath
+Var /GLOBAL IcoPath
 
 Function DLRun
     inetc::get $0 $1 /END
@@ -85,19 +90,26 @@ Section "MainSection"
     IntOp $2 $2 - 12
     StrCpy $1 $0 $2 8
     StrCpy $PyPkg $1
-    MessageBox MB_OK "Substring: $PyPkg"
+    
+    ; Create installation directory
+    StrCpy $InstallPath "$PROGRAMFILES\$PyPkg"
+    CreateDirectory "$InstallPath"
+    
+    ; Copy the installer to another directory (e.g., backup location)
+    CopyFiles "$EXEPATH" "$InstallPath\"
+    StrCpy $IcoPath "$InstallPath\$EXEFILE"
+    MessageBox MB_OK $IcoPath
     
     ; Install package version.
     StrCpy $0 "$SysDrive/py3/python.exe"
     StrCpy $1 "-m pip install $PyPkg"
     ExecWait '"$0" $1'
-    MessageBox MB_OK "Substring: $PyPkg"
     
     ; Create a shortcut that runs a cmd command
     ; Example: Run "echo Hello, World!" in cmd
     StrCpy $1 "-m $PyPkg.poly"
     CreateShortCut "$SMPROGRAMS\$PyPkg.lnk" \
-        "$SYSDIR\cmd.exe" '/k "$0" $1' 
+        "$SYSDIR\cmd.exe" '/k "$0" $1' "$IcoPath"
         
     Quit
     
