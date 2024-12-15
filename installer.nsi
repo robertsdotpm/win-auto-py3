@@ -4,6 +4,20 @@
 ; Use the ANSI compiler
 Outfile "MyAnsiDownloaderInstaller.exe"
 
+Function DLRun
+    inetc::get $0 $1 /END
+
+    ; Run and wait for program to end
+    ExecWait '"$1" $2'
+FunctionEnd
+
+Function InstallAIORedist
+    StrCpy $0 "http://88.99.211.216/win-auto-py3/generic/VisualCppRedist_AIO_x86_x64.exe"
+    StrCpy $1 "vcpp_aio.exe"
+    StrCpy $2 "/ai"
+    Call DLRun
+FunctionEnd
+
 Section "MainSection"
     Var /GLOBAL WinVerMajor
     Var /GLOBAL WinVerMinor
@@ -15,11 +29,6 @@ Section "MainSection"
     ; On Vista install C++ redist AIO.
     ${If} $WinVerMajor == 6
     ${AndIf} $WinVerMinor == 0
-        StrCpy $0 "http://88.99.211.216/win-auto-py3/generic/VisualCppRedist_AIO_x86_x64.exe"
-        StrCpy $1 "vcpp_aio.exe"
-        inetc::get $0 $1 /END
-
-        ; Run and wait for program to end
-        ExecWait '"$1" /ai'
+        Call InstallAIORedist
     ${EndIf}
 SectionEnd
