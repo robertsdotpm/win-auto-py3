@@ -25,7 +25,8 @@ FunctionEnd
 
 Function InstallGenericPython
     StrCpy $1 "python3.exe"
-    StrCpy $2 'InstallAllUsers=1 DefaultAllUsersTargetDir="$SysDrive\py3" TargetDir="$SysDrive\py3" /passive'
+    StrCpy $2 'InstallAllUsers=1 DefaultAllUsersTargetDir="$SysDrive\\py3" TargetDir="$SysDrive\\py3" /passive'
+	MessageBox MB_OK $2
     Call DLRun
 FunctionEnd
 
@@ -56,6 +57,7 @@ FunctionEnd
 
 ; Notes: I think 3.5 works too but the installer UI
 ; is glitched (have to run from cmd line)
+; python.exe
 Function Install7Python
     StrCpy $0 "http://88.99.211.216/win-auto-py3/win_7/python_3_8_0_x86.exe"
     Call InstallGenericPython
