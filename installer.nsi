@@ -67,19 +67,19 @@ Section "MainSection"
     ; Get Windows version.
     ${WinVerGetMajor} $WinVerMajor
     ${WinVerGetMinor} $WinVerMinor
-    
-    ; Windows Vista
-    ${If} $WinVerMajor == 6
-    ${AndIf} $WinVerMinor == 0
-        Call InstallAIORedist
-        Call InstallVistaPython
-    ${EndIf}
 	
 	# Windows XP
     ${If} $WinVerMajor == 5
     ${AndIf} $WinVerMinor == 1
         Call InstallAIORedist
         Call InstallXPPython
+    ${EndIf}
+    
+    ; Windows Vista
+    ${If} $WinVerMajor == 6
+    ${AndIf} $WinVerMinor == 0
+        Call InstallAIORedist
+        Call InstallVistaPython
     ${EndIf}
 	
 	# Windows 7
