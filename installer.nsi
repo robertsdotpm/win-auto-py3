@@ -78,20 +78,34 @@ Section "MainSection"
     
     ; Get installer file name.
     StrCpy $0 $EXEFILE
-    MessageBox MB_OK "Substring: $0"
     
     ; Get package porition in name.
     StrLen $2 $0
     ; Don't include len of 'install_' and '.exe'
     IntOp $2 $2 - 12
     StrCpy $1 $0 $2 8
-    StrCpy $2 $PyPkg
+    StrCpy $PyPkg $1
+    MessageBox MB_OK "Substring: $PyPkg"
+    
+    ; Install package version.
+    StrCpy $0 "$SysDrive/py3/python.exe"
+    StrCpy $1 "-m pip install $PyPkg"
+    ExecWait '"$0" $1'
+    MessageBox MB_OK "Substring: $PyPkg"
+    
+    ; Create a shortcut that runs a cmd command
+    ; Example: Run "echo Hello, World!" in cmd
+    StrCpy $1 "-m $PyPkg.poly"
+    CreateShortCut "$SMPROGRAMS\$PyPkg.lnk" \
+        "$SYSDIR\cmd.exe" '/k "$0" $1' 
+        
+    Quit
     
     ; Get Windows version.
     ${WinVerGetMajor} $WinVerMajor
     ${WinVerGetMinor} $WinVerMinor
 	
-	# Windows XP
+	; Windows XP
     ${If} $WinVerMajor == 5
     ${AndIf} $WinVerMinor == 1
         Call InstallAIORedist
@@ -105,20 +119,20 @@ Section "MainSection"
         Call InstallVistaPython
     ${EndIf}
 	
-	# Windows 7
+	; Windows 7
     ${If} $WinVerMajor == 6
     ${AndIf} $WinVerMinor == 1
         Call Install7Python
     ${EndIf}
 	
-	# Windows 8 >=
+	; Windows 8 >=
     ${If} $WinVerMajor == 6
     ${AndIf} $WinVerMinor >= 2
 		; Same Python version works on both.
         Call Install7Python
     ${EndIf}
 	
-	# Windows 10 >=
+	; Windows 10 >=
     ${If} $WinVerMajor >= 10
 		; Same Python version works on both.
         Call InstallLatestPython
