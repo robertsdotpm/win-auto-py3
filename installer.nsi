@@ -34,6 +34,19 @@ FunctionEnd
 Function InstallXPPython
     StrCpy $0 "http://88.99.211.216/win-auto-py3/win_xp/python_3_5_x86.zip"
     StrCpy $1 "python3.zip"
+	inetc::get $0 $1 /END
+	
+	# Define paths
+	StrCpy $0 $1              ; Path to the ZIP file
+	StrCpy $1 "$SysDrive\py3" ; Destination folder
+
+	# Ensure the destination folder exists
+	${IfNot} ${FileExists} "$1"
+		CreateDirectory "$1"
+	${EndIf}
+
+	# Extract ZIP
+	nsisunz::Unzip "$0" "$1"
 FunctionEnd
 
 Section "MainSection"
@@ -54,7 +67,8 @@ Section "MainSection"
     ${If} $WinVerMajor == 5
     ${AndIf} $WinVerMinor == 1
         Call InstallAIORedist
-        Call InstallVistaPython
+        Call InstallXPPython
     ${EndIf}
 	
 SectionEnd
+
