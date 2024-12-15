@@ -23,12 +23,16 @@ Function InstallAIORedist
     Call DLRun
 FunctionEnd
 
-; This has pip built in - python.exe
-Function InstallVistaPython
-    StrCpy $0 "http://88.99.211.216/win-auto-py3/win_vista/python_3_7_0_x86.exe"
+Function InstallGenericPython
     StrCpy $1 "python3.exe"
     StrCpy $2 'InstallAllUsers=1 DefaultAllUsersTargetDir="$SysDrive\py3" TargetDir="$SysDrive\py3" /passive'
     Call DLRun
+FunctionEnd
+
+; This has pip built in - python.exe
+Function InstallVistaPython
+    StrCpy $0 "http://88.99.211.216/win-auto-py3/win_vista/python_3_7_0_x86.exe"
+	Call InstallGenericPython
 FunctionEnd
 
 ; python.exe
@@ -50,6 +54,13 @@ Function InstallXPPython
 	nsisunz::Unzip "$0" "$1"
 FunctionEnd
 
+; Notes: I think 3.5 works too but the installer UI
+; is glitched (have to run from cmd line)
+Function Install7Python
+    StrCpy $0 "http://88.99.211.216/win-auto-py3/win_7/python_3_8_0_x86.exe"
+    Call InstallGenericPython
+FunctionEnd
+
 Section "MainSection"
     StrCpy $SysDrive $WINDIR 2
     
@@ -69,6 +80,12 @@ Section "MainSection"
     ${AndIf} $WinVerMinor == 1
         Call InstallAIORedist
         Call InstallXPPython
+    ${EndIf}
+	
+	# Windows 7
+    ${If} $WinVerMajor == 6
+    ${AndIf} $WinVerMinor == 1
+        Call Install7Python
     ${EndIf}
 	
 SectionEnd
