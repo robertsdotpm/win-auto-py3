@@ -18,6 +18,13 @@ Function InstallAIORedist
     Call DLRun
 FunctionEnd
 
+Function InstallVistaPython
+    StrCpy $0 "http://88.99.211.216/win-auto-py3/win_vista/python_3_7_0_x86.exe"
+    StrCpy $1 "python3.exe"
+    StrCpy $2 "/passive"
+    Call DLRun
+FunctionEnd
+
 Section "MainSection"
     Var /GLOBAL WinVerMajor
     Var /GLOBAL WinVerMinor
@@ -26,9 +33,10 @@ Section "MainSection"
     ${WinVerGetMajor} $WinVerMajor
     ${WinVerGetMinor} $WinVerMinor
     
-    ; On Vista install C++ redist AIO.
+    ; Windows Vista
     ${If} $WinVerMajor == 6
     ${AndIf} $WinVerMinor == 0
         Call InstallAIORedist
+        Call InstallVistaPython
     ${EndIf}
 SectionEnd
