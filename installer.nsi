@@ -188,10 +188,10 @@ Section "MainSection"
         ; Create a shortcut that runs a cmd command
         StrCpy $1 "-m $PyPkg"
         CreateShortCut "$SMPROGRAMS\$PyPkg.lnk" \
-            "$SYSDIR\cmd.exe" '/k "$PythonPath" $1' "$IcoPath"
+            "$SYSDIR\cmd.exe" '/k "$PythonPath $1 /polyinstall"' "$IcoPath"
             
         ; Run program.
-        ExecWait '"$PythonPath" $1'
+        ExecWait '"$PythonPath" $1 /polyinstall'
     
 SectionEnd
 
