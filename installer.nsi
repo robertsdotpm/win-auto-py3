@@ -1,3 +1,9 @@
+; Using fixed IPs for download URLs = highly recommended.
+; This is because DNS is often broken on old hosts.
+; The more simple something is, the less that can break.
+; Note 1 -- Have not tested for server versions yet.
+; Note 2 -- No support prior to XP (yet.)
+;----------------------------------------------------------
 !include "LogicLib.nsh"
 !include "WinVer.nsh"
 !include "FileFunc.nsh"
@@ -19,6 +25,7 @@ Var /Global PythonPath
 Var /GLOBAL InstallPath
 Var /GLOBAL IcoPath
 Var /GLOBAL PyPkg
+Var /GLOBAL MirrorBase
 
 ; Download exe from URL and run it.
 Function DLRun
@@ -30,7 +37,7 @@ FunctionEnd
 
 ; Installs the many VS C++ redists for older platforms.
 Function InstallAIORedist
-    StrCpy $0 "http://88.99.211.216/win-auto-py3/generic/VisualCppRedist_AIO_x86_x64.exe"
+    StrCpy $0 "$MirrorBase/generic/VisualCppRedist_AIO_x86_x64.exe"
     StrCpy $1 "vcpp_aio.exe"
     StrCpy $2 "/ai"
     Call DLRun
@@ -45,14 +52,14 @@ FunctionEnd
 
 ; Vista Python URL (roberts.pm.)
 Function InstallVistaPython
-    StrCpy $0 "http://88.99.211.216/win-auto-py3/win_vista/python_3_7_0_x86.exe"
+    StrCpy $0 "$MirrorBase/win_vista/python_3_7_0_x86.exe"
 	Call InstallGenericPython
 FunctionEnd
 
 ; XP Python URL (roberts.pm.)
 ; Repackaged a custom Python build so it has pip.
 Function InstallXPPython
-    StrCpy $0 "http://88.99.211.216/win-auto-py3/win_xp/python_3_5_x86.zip"
+    StrCpy $0 "$MirrorBase/win_xp/python_3_5_x86.zip"
     StrCpy $1 "python3.zip"
 	inetc::get $0 $1 /END
 	
@@ -71,18 +78,21 @@ FunctionEnd
 
 ; Win 7 Python URL (roberts.pm.)
 Function Install7Python
-    StrCpy $0 "http://88.99.211.216/win-auto-py3/win_7/python_3_8_0_x86.exe"
+    StrCpy $0 "$MirrorBase/win_7/python_3_8_0_x86.exe"
     Call InstallGenericPython
 FunctionEnd
 
 ; Latest Python (for 10 / 11 etc) on (roberts.pm.)
 Function InstallLatestPython
-    StrCpy $0 "http://88.99.211.216/win-auto-py3/generic/python_3_13_x86.exe"
+    StrCpy $0 "$MirrorBase/generic/python_3_13_x86.exe"
     Call InstallGenericPython
 FunctionEnd
 
 ; Main installer program.
 Section "MainSection"
+    ; Path to mirror hosting the files.
+    StrCpy $MirrorBase "http://88.99.211.216/win-auto-py3"
+
     ; Copy sys drive to var.
     StrCpy $SysDrive $WINDIR 2
     
@@ -107,7 +117,7 @@ Section "MainSection"
     StartInstallPython:
         ; Windows XP
         ${If} $WinVerMajor == 5
-        ${AndIf} $WinVerMinor == 1
+        ${AndIf} $WinVerMinor >= 1
             Call InstallAIORedist
             Call InstallXPPython
         ${EndIf}
