@@ -3,5 +3,4 @@ installer*.exe
 vcpp_aio.exe
 python3.exe
 python3.zip
-install_*
 install_asyncio.exe
