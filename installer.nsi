@@ -3,6 +3,7 @@
 ; The more simple something is, the less that can break.
 ; Note 1 -- Have not tested for server versions yet.
 ; Note 2 -- No support prior to XP (yet.)
+; Todo: use existing python if it exists because conflicts ruin everything.
 ;----------------------------------------------------------
 !include "LogicLib.nsh"
 !include "WinVer.nsh"
@@ -24,17 +25,19 @@ CRCCheck off
 RequestExecutionLevel admin
 
 ; Use the ANSI compiler
-Outfile "install_p2pd.exe"
+Outfile "install_!YOUR-PYPI-PKG-HERE.exe"
 
 ; Useful global dependencies.
 Var /GLOBAL WinVerMajor
 Var /GLOBAL WinVerMinor
 Var /GLOBAL SysDrive
+Var /GLOBAL PythonVersion
 Var /Global PythonPath
 Var /GLOBAL InstallPath
 Var /GLOBAL IcoPath
 Var /GLOBAL PyPkg
 Var /GLOBAL MirrorBase
+Var /GLOBAL VersionIndex
 
 ; Download exe from URL and run it.
 Function DLRun
@@ -55,7 +58,7 @@ FunctionEnd
 ; Set Python install setup arguments.
 Function InstallGenericPython
     StrCpy $1 "python3.exe"
-    StrCpy $2 'InstallAllUsers=1 DefaultAllUsersTargetDir="$SysDrive\\py3" TargetDir="$SysDrive\\py3" /passive'
+    StrCpy $2 'AppendPath=0 InstallAllUsers=1 DefaultAllUsersTargetDir="$SysDrive\\py3" TargetDir="$SysDrive\\py3" /passive'
     Call DLRun
 FunctionEnd
 
@@ -97,8 +100,94 @@ Function InstallLatestPython
     Call InstallGenericPython
 FunctionEnd
 
+; Helper function to search a registry path for Python InstallPath
+Function SearchRegistry
+    ; Pop the root key from the stack into $1
+    Pop $1
+    MessageBox MB_OK "$1"
+
+    ; Input: $RegKey should be set to either HKLM or HKCU
+    ClearErrors
+    ;Var /GLOBAL InstallPath
+
+    ; Initialize version index
+    StrCpy $VersionIndex 0
+
+    loop:
+        ; Enumerate subkeys (Python versions)
+        ${If} $1 == "HKCU"
+            EnumRegKey $PythonVersion HKCU Software\Python\PythonCore $VersionIndex
+        ${Else}
+            EnumRegKey $PythonVersion HKLM Software\Python\PythonCore $VersionIndex
+        ${EndIf}        
+        
+        ${If} ${Errors}
+            ; No more subkeys, exit loop
+            Return
+        ${EndIf}
+
+        ; Increment version index for next iteration
+        IntOp $VersionIndex $VersionIndex + 1
+        
+        MessageBox MB_OK $PythonVersion 
+
+        ; Try to read the InstallPath for this version
+        ClearErrors
+        ${If} $1 == "HKCU"
+            ReadRegStr $InstallPath HKCU Software\Python\PythonCore\$PythonVersion\InstallPath ""
+        ${Else}
+            ReadRegStr $InstallPath HKLM Software\Python\PythonCore\$PythonVersion\InstallPath ""
+        ${EndIf}      
+        
+        ${If} ${Errors}
+            ; No InstallPath found for this version, continue to next subkey
+            Goto loop
+        ${EndIf}
+
+        ; If InstallPath is found, set PythonPath and exit
+        StrCpy $PythonPath $InstallPath
+        MessageBox MB_OK $PythonPath
+        Return
+
+    Goto loop
+FunctionEnd
+
+Function GetPythonPath
+    ; Declare temporary variables
+    Var /GLOBAL RegKey
+
+    ; Initialize $0 to an empty string
+    StrCpy $0 ""
+
+    ; Search HKEY_LOCAL_MACHINE
+    Push "HKLM"
+    Call SearchRegistry
+    ${If} $PythonPath != ""
+        ; Found PythonPath in HKLM
+        Return
+    ${EndIf}
+
+    ; Search HKEY_CURRENT_USER
+    Push "HKCU"
+    Call SearchRegistry
+    ${If} $PythonPath != ""
+        ; Found PythonPath in HKCU
+        Return
+    ${EndIf}
+FunctionEnd
+
 ; Main installer program.
 Section "MainSection"
+    Call GetPythonPath
+    
+    ${If} $PythonPath == ""
+        MessageBox MB_OK "Python is not installed."
+    ${Else}
+        MessageBox MB_OK "Python is installed at: $PythonPath"
+    ${EndIf}
+    
+    Quit
+
     ; Get Windows version.
     ${WinVerGetMajor} $WinVerMajor
     ${WinVerGetMinor} $WinVerMinor
@@ -127,17 +216,15 @@ Section "MainSection"
     ; Get base mirror URL (from file description.)
     MoreInfo::GetFileDescription "$IcoPath"
     Pop $1
-    StrCmp "$1" "" SetDefaultMirror SetCustomMirror
     
     ; If it's found -- use it.
-    SetCustomMirror: 
-        StrCpy $MirrorBase "$1"
-        Goto CheckPythonInstall
-    
-    ; Otherwise use the included default mirror.
-    SetDefaultMirror:
+    ${If} $1 == ""
         StrCpy $MirrorBase "${BASE_MIRROR}"
         Goto CheckPythonInstall
+    ${Else}
+        StrCpy $MirrorBase "$1"
+        Goto CheckPythonInstall
+    ${EndIf}
     
     ; Skip Python install if already exists.
     CheckPythonInstall:
