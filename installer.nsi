@@ -1,6 +1,6 @@
 !include "LogicLib.nsh"
 !include "WinVer.nsh"
-!include FileFunc.nsh
+!include "FileFunc.nsh"
 
 ; Allow icon to be modified.
 CRCCheck off
@@ -12,13 +12,15 @@ RequestExecutionLevel admin
 Outfile "install_p2pd.exe"
 
 ; Useful global dependencies.
-Var /GLOBAL SysDrive
 Var /GLOBAL WinVerMajor
 Var /GLOBAL WinVerMinor
-Var /GLOBAL PyPkg
+Var /GLOBAL SysDrive
+Var /Global PythonPath
 Var /GLOBAL InstallPath
 Var /GLOBAL IcoPath
+Var /GLOBAL PyPkg
 
+; Download exe from URL and run it.
 Function DLRun
     inetc::get $0 $1 /END
 
@@ -26,6 +28,7 @@ Function DLRun
     ExecWait '"$1" $2'
 FunctionEnd
 
+; Installs the many VS C++ redists for older platforms.
 Function InstallAIORedist
     StrCpy $0 "http://88.99.211.216/win-auto-py3/generic/VisualCppRedist_AIO_x86_x64.exe"
     StrCpy $1 "vcpp_aio.exe"
@@ -33,19 +36,21 @@ Function InstallAIORedist
     Call DLRun
 FunctionEnd
 
+; Set Python install setup arguments.
 Function InstallGenericPython
     StrCpy $1 "python3.exe"
     StrCpy $2 'InstallAllUsers=1 DefaultAllUsersTargetDir="$SysDrive\\py3" TargetDir="$SysDrive\\py3" /passive'
     Call DLRun
 FunctionEnd
 
-; This has pip built in - python.exe
+; Vista Python URL (roberts.pm.)
 Function InstallVistaPython
     StrCpy $0 "http://88.99.211.216/win-auto-py3/win_vista/python_3_7_0_x86.exe"
 	Call InstallGenericPython
 FunctionEnd
 
-; python.exe
+; XP Python URL (roberts.pm.)
+; Repackaged a custom Python build so it has pip.
 Function InstallXPPython
     StrCpy $0 "http://88.99.211.216/win-auto-py3/win_xp/python_3_5_x86.zip"
     StrCpy $1 "python3.zip"
@@ -64,93 +69,97 @@ Function InstallXPPython
 	nsisunz::Unzip "$0" "$1"
 FunctionEnd
 
-; Notes: I think 3.5 works too but the installer UI
-; is glitched (have to run from cmd line)
-; python.exe
+; Win 7 Python URL (roberts.pm.)
 Function Install7Python
     StrCpy $0 "http://88.99.211.216/win-auto-py3/win_7/python_3_8_0_x86.exe"
     Call InstallGenericPython
 FunctionEnd
 
+; Latest Python (for 10 / 11 etc) on (roberts.pm.)
 Function InstallLatestPython
     StrCpy $0 "http://88.99.211.216/win-auto-py3/generic/python_3_13_x86.exe"
     Call InstallGenericPython
 FunctionEnd
 
+; Main installer program.
 Section "MainSection"
     ; Copy sys drive to var.
     StrCpy $SysDrive $WINDIR 2
     
-    ; Get installer file name.
-    StrCpy $0 $EXEFILE
+    ; Path to python.exe.
+    StrCpy $PythonPath "$SysDrive/py3/python.exe"
     
-    ; Get package porition in name.
+    ; Get package portion in name.
+    StrCpy $0 $EXEFILE
     StrLen $2 $0
-    ; Don't include len of 'install_' and '.exe'
-    IntOp $2 $2 - 12
+    IntOp $2 $2 - 12 ; Ignore 'install_' and '.exe' len.
     StrCpy $1 $0 $2 8
     StrCpy $PyPkg $1
-    
-    ; Create installation directory
-    StrCpy $InstallPath "$PROGRAMFILES\$PyPkg"
-    CreateDirectory "$InstallPath"
-    
-    ; Copy the installer to another directory (e.g., backup location)
-    CopyFiles "$EXEPATH" "$InstallPath\"
-    StrCpy $IcoPath "$InstallPath\$EXEFILE"
-    MessageBox MB_OK $IcoPath
-    
-    ; Install package version.
-    StrCpy $0 "$SysDrive/py3/python.exe"
-    StrCpy $1 "-m pip install $PyPkg"
-    ExecWait '"$0" $1'
-    
-    ; Create a shortcut that runs a cmd command
-    ; Example: Run "echo Hello, World!" in cmd
-    StrCpy $1 "-m $PyPkg.poly"
-    CreateShortCut "$SMPROGRAMS\$PyPkg.lnk" \
-        "$SYSDIR\cmd.exe" '/k "$0" $1' "$IcoPath"
-        
-    Quit
     
     ; Get Windows version.
     ${WinVerGetMajor} $WinVerMajor
     ${WinVerGetMinor} $WinVerMinor
-	
-	; Windows XP
-    ${If} $WinVerMajor == 5
-    ${AndIf} $WinVerMinor == 1
-        Call InstallAIORedist
-        Call InstallXPPython
-    ${EndIf}
     
-    ; Windows Vista
-    ${If} $WinVerMajor == 6
-    ${AndIf} $WinVerMinor == 0
-        Call InstallAIORedist
-        Call InstallVistaPython
-    ${EndIf}
-	
-	; Windows 7
-    ${If} $WinVerMajor == 6
-    ${AndIf} $WinVerMinor == 1
-        Call Install7Python
-    ${EndIf}
-	
-	; Windows 8 >=
-    ${If} $WinVerMajor == 6
-    ${AndIf} $WinVerMinor >= 2
-		; Same Python version works on both.
-        Call Install7Python
-    ${EndIf}
-	
-	; Windows 10 >=
-    ${If} $WinVerMajor >= 10
-		; Same Python version works on both.
-        Call InstallLatestPython
-    ${EndIf}
+    ; Skip Python install if already exists.
+    IfFileExists "$PythonPath" EndInstallPython StartInstallPython
     
-
+    ; Branch to install Python into c:/py3
+    StartInstallPython:
+        ; Windows XP
+        ${If} $WinVerMajor == 5
+        ${AndIf} $WinVerMinor == 1
+            Call InstallAIORedist
+            Call InstallXPPython
+        ${EndIf}
+        
+        ; Windows Vista
+        ${If} $WinVerMajor == 6
+        ${AndIf} $WinVerMinor == 0
+            Call InstallAIORedist
+            Call InstallVistaPython
+        ${EndIf}
+        
+        ; Windows 7
+        ${If} $WinVerMajor == 6
+        ${AndIf} $WinVerMinor == 1
+            Call Install7Python
+        ${EndIf}
+        
+        ; Windows 8 >=
+        ${If} $WinVerMajor == 6
+        ${AndIf} $WinVerMinor >= 2
+            ; Same Python version works on both.
+            Call Install7Python
+        ${EndIf}
+        
+        ; Windows 10 >=
+        ${If} $WinVerMajor >= 10
+            ; Same Python version works on both.
+            Call InstallLatestPython
+        ${EndIf}
+    
+    ; Setup app launchers.
+    ; Also do first run of program.
+    EndInstallPython:
+        ; Create installation directory
+        StrCpy $InstallPath "$PROGRAMFILES\$PyPkg"
+        CreateDirectory "$InstallPath"
+        
+        ; Copy the installer to another directory (e.g., backup location)
+        CopyFiles "$EXEPATH" "$InstallPath\"
+        StrCpy $IcoPath "$InstallPath\$EXEFILE"
+        
+        ; Install package version.
+        StrCpy $0 "-m pip install $PyPkg"
+        ExecWait '"$PythonPath" $0'
+        
+        ; Create a shortcut that runs a cmd command
+        StrCpy $1 "-m $PyPkg"
+        CreateShortCut "$SMPROGRAMS\$PyPkg.lnk" \
+            "$SYSDIR\cmd.exe" '/k "$PythonPath" $1' "$IcoPath"
+            
+        ; Run program.
+        ExecWait '"$PythonPath" $1'
     
 SectionEnd
 
