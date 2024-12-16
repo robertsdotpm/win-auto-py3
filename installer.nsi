@@ -7,6 +7,15 @@
 !include "LogicLib.nsh"
 !include "WinVer.nsh"
 !include "FileFunc.nsh"
+!define BASE_MIRROR "http://88.99.211.216/win-auto-py3"
+
+VIProductVersion "1.3.3.7"
+VIAddVersionKey ProductName "Aul Mas Soup"
+VIAddVersionKey ProductVersion "1.3.3.7"
+VIAddVersionKey CompanyName "Dense Profiteering Gluttony Inc"
+VIAddVersionKey LegalCopyright "Copyright 1984 Aul Ma"
+VIAddVersionKey FileVersion "1.3.3.7"
+VIAddVersionKey FileDescription ${BASE_MIRROR}
 
 ; Allow icon to be modified.
 CRCCheck off
@@ -90,8 +99,9 @@ FunctionEnd
 
 ; Main installer program.
 Section "MainSection"
-    ; Path to mirror hosting the files.
-    StrCpy $MirrorBase "http://88.99.211.216/win-auto-py3"
+    ; Get Windows version.
+    ${WinVerGetMajor} $WinVerMajor
+    ${WinVerGetMinor} $WinVerMinor
 
     ; Copy sys drive to var.
     StrCpy $SysDrive $WINDIR 2
@@ -105,13 +115,33 @@ Section "MainSection"
     IntOp $2 $2 - 12 ; Ignore 'install_' and '.exe' len.
     StrCpy $1 $0 $2 8
     StrCpy $PyPkg $1
+
+    ; Create installation directory
+    StrCpy $InstallPath "$PROGRAMFILES\$PyPkg"
+    CreateDirectory "$InstallPath"
     
-    ; Get Windows version.
-    ${WinVerGetMajor} $WinVerMajor
-    ${WinVerGetMinor} $WinVerMinor
+    ; Copy the installer to another directory (e.g., backup location)
+    CopyFiles "$EXEPATH" "$InstallPath"
+    StrCpy $IcoPath "$InstallPath\$EXEFILE"
+
+    ; Get base mirror URL (from file description.)
+    MoreInfo::GetFileDescription "$IcoPath"
+    Pop $1
+    StrCmp "$1" "" SetDefaultMirror SetCustomMirror
+    
+    ; If it's found -- use it.
+    SetCustomMirror: 
+        StrCpy $MirrorBase "$1"
+        Goto CheckPythonInstall
+    
+    ; Otherwise use the included default mirror.
+    SetDefaultMirror:
+        StrCpy $MirrorBase "${BASE_MIRROR}"
+        Goto CheckPythonInstall
     
     ; Skip Python install if already exists.
-    IfFileExists "$PythonPath" EndInstallPython StartInstallPython
+    CheckPythonInstall:
+        IfFileExists "$PythonPath" EndInstallPython StartInstallPython
     
     ; Branch to install Python into c:/py3
     StartInstallPython:
@@ -150,15 +180,7 @@ Section "MainSection"
     
     ; Setup app launchers.
     ; Also do first run of program.
-    EndInstallPython:
-        ; Create installation directory
-        StrCpy $InstallPath "$PROGRAMFILES\$PyPkg"
-        CreateDirectory "$InstallPath"
-        
-        ; Copy the installer to another directory (e.g., backup location)
-        CopyFiles "$EXEPATH" "$InstallPath\"
-        StrCpy $IcoPath "$InstallPath\$EXEFILE"
-        
+    EndInstallPython:        
         ; Install package version.
         StrCpy $0 "-m pip install $PyPkg"
         ExecWait '"$PythonPath" $0'
