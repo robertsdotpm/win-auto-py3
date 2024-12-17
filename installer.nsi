@@ -42,6 +42,16 @@ Var /GLOBAL PyPkg
 Var /GLOBAL MirrorBase
 Var /GLOBAL VersionIndex
 
+Function FileSize 
+    Exch $0
+    Push $1
+    FileOpen $1 $0 "r"
+    FileSeek $1 0 END $0
+    FileClose $1
+    Pop $1
+    Exch $0
+FunctionEnd
+
 Function FindProgramInPath
     ; Get the PATH environment variable
     ReadEnvStr $2 "PATH"
@@ -69,6 +79,16 @@ Function FindProgramInPath
         found:
             ; Program found, store path in $1 and exit function
             StrCpy $1 "$5"
+            
+            ; Ignore blank files.
+            Push $1
+            Call FileSize
+            Pop $6
+            ${If} $6 == 0
+                Goto loop
+            ${EndIf}
+            
+        
             Return
 
         not_found:
@@ -212,6 +232,17 @@ Function SearchRegistryForPython
             ; No InstallPath found for this version, continue to next subkey
             Goto loop
         ${EndIf}
+        
+        ${If} $5 == "HKCU"
+            ReadRegStr $InstallPath HKCU Software\Python\PythonCore\$PythonVersion\InstallPath "ExecutablePath"
+        ${Else}
+            ReadRegStr $InstallPath HKLM Software\Python\PythonCore\$PythonVersion\InstallPath "ExecutablePath"
+        ${EndIf}   
+
+        ${If} ${Errors}
+            ; No InstallPath found for this version, continue to next subkey
+            Goto loop
+        ${EndIf}        
 
         ; If InstallPath is found, set PythonPath and exit
         StrCpy $PythonPath $InstallPath
@@ -221,6 +252,25 @@ Function SearchRegistryForPython
 FunctionEnd
 
 Function GetPythonPath
+    ; These conditions here work with pyenv too.
+    ; -------------------------------------------
+    
+    ; Look for python3 in path.
+    StrCpy $0 "python3"
+    Call FindProgramInPath
+    ${If} $1 != ""
+        StrCpy $PythonPath "$1"
+        Return
+    ${EndIf}
+    
+    ; Look for python in path.
+    StrCpy $0 "python"
+    Call FindProgramInPath
+    ${If} $1 != ""
+        StrCpy $PythonPath "$1"
+        Return
+    ${EndIf}
+
     ; Initialize $0 to an empty string
     StrCpy $0 ""
 
@@ -240,36 +290,11 @@ Function GetPythonPath
         Return
     ${EndIf}
     
-    ; Look for python3 in path.
-    StrCpy $0 "python3.exe"
-    Call FindProgramInPath
-    ${If} $1 != ""
-        StrCpy $PythonPath "$1"
-        Return
-    ${EndIf}
-    
-    ; Look for python in path.
-    StrCpy $0 "python.exe"
-    Call FindProgramInPath
-    ${If} $1 != ""
-        StrCpy $PythonPath "$1"
-        Return
-    ${EndIf}
+
 FunctionEnd
-
-
 
 ; Main installer program.
 Section "MainSection"
-    Call GetPythonPath
-
-    ${If} $PythonPath == ""
-        MessageBox MB_OK "Python is not installed."
-    ${Else}
-        MessageBox MB_OK "Python is installed at: $PythonPath"
-    ${EndIf}
-    
-    Quit
 
     ; Get Windows version.
     ${WinVerGetMajor} $WinVerMajor
@@ -277,9 +302,6 @@ Section "MainSection"
 
     ; Copy sys drive to var.
     StrCpy $SysDrive $WINDIR 2
-    
-    ; Path to python.exe.
-    StrCpy $PythonPath "$SysDrive/py3/python.exe"
     
     ; Get package portion in name.
     StrCpy $0 $EXEFILE
@@ -311,7 +333,13 @@ Section "MainSection"
     
     ; Skip Python install if already exists.
     CheckPythonInstall:
-        IfFileExists "$PythonPath" EndInstallPython StartInstallPython
+        Call GetPythonPath
+        ${If} $PythonPath == ""
+            StrCpy $PythonPath "$SysDrive/py3/python.exe"
+            IfFileExists "$PythonPath" EndInstallPython StartInstallPython
+        ${Else}
+            Goto EndInstallPython
+        ${EndIf}
     
     ; Branch to install Python into c:/py3
     StartInstallPython:
@@ -355,13 +383,23 @@ Section "MainSection"
         StrCpy $0 "-m pip install $PyPkg"
         ExecWait '"$PythonPath" $0'
         
+        ; Delete shortcut if it exists.
+        ; Otherwise it can point to old Python versions.
+        StrCpy $3 "$SMPROGRAMS\$PyPkg.lnk"
+        IfFileExists "$3" DeleteShortCut
+        DeleteShortCut:
+            Delete "$3"
+        
         ; Create a shortcut that runs a cmd command
         StrCpy $1 "-m $PyPkg"
-        CreateShortCut "$SMPROGRAMS\$PyPkg.lnk" \
-            "$SYSDIR\cmd.exe" '/k "$PythonPath $1 /polyinstall"' "$IcoPath"
+        CreateShortCut \
+            "$3" \
+            "$SYSDIR\cmd.exe" \
+            '/k "cd %USERPROFILE% && $PythonPath $1 /polyinstall"' \
+            "$IcoPath"
             
         ; Run program.
-        ExecWait '"$PythonPath" $1 /polyinstall'
+        Exec '"$PythonPath" $1 /polyinstall'
     
 SectionEnd
 
