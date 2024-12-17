@@ -1,6 +1,6 @@
 # Introduction
 
-Install any Python package by renaming an exe! WTF? Yes, really.
+**Install any Python package by renaming an exe!** WTF? Yes, really.
 
 The repo contains an EXE file called "install_1NSERT-PYPI-PKG-HERE.exe". Replace '1NSERT-PYPI-PKG-HERE' with your Pypi package name. The installer will automatically download Python (if it needs to), install your app, and make a start menu link to run it.
 
@@ -18,7 +18,7 @@ if sys.argv[-1] == "/polyinstall":
 
 You can use a resource editor to change the installer icon for the EXE file. This is what will show up as the icon for your program when it's installed.
 
-# Custom package mirror.
+# Custom package mirror
 
 The base URL for the installer is part of the EXE's file description field. Modifying this allows for the EXE to be patched with different package mirrors.
     
