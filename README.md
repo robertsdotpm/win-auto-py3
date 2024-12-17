@@ -1,8 +1,8 @@
 # Introduction
 
-**Install any Python package by renaming an exe!** WTF? Yes, really.
+**Install any Python 3 package by renaming an exe!** WTF? Yes, really.
 
-The repo contains an EXE file called "**install_1NSERT-PYPI-PKG-HERE.exe**". Replace '**1NSERT-PYPI-PKG-HERE**' with your Pypi package name. The installer will automatically download Python (if it needs to), install your app, and make a start menu link to run it.
+The repo contains an EXE file called "**install_1NSERT-PYPI-PKG-HERE.exe**". Replace '**1NSERT-PYPI-PKG-HERE**' with your Pypi package name. The installer will automatically download Python 3 (if it needs to), install your app, and make a start menu link to run it.
 
 **The entry point is python.exe -m your-package /polyinstall.**
 
