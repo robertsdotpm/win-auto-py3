@@ -8,6 +8,7 @@
 !include "LogicLib.nsh"
 !include "WinVer.nsh"
 !include "FileFunc.nsh"
+!include "StrTok.nsh"
 !define BASE_MIRROR "http://88.99.211.216/win-auto-py3"
 
 VIProductVersion "1.3.3.7"
@@ -25,7 +26,7 @@ CRCCheck off
 RequestExecutionLevel admin
 
 ; Use the ANSI compiler
-Outfile "install_!YOUR-PYPI-PKG-HERE.exe"
+Outfile "install_1NSERT-PYPI-PKG-HERE.exe"
 
 ; Useful global dependencies.
 Var /GLOBAL WinVerMajor
@@ -33,6 +34,8 @@ Var /GLOBAL WinVerMinor
 Var /GLOBAL SysDrive
 Var /GLOBAL PythonVersion
 Var /Global PythonPath
+Var /GLOBAL PythonVerMajor
+Var /GLOBAL PythonVerMinor
 Var /GLOBAL InstallPath
 Var /GLOBAL IcoPath
 Var /GLOBAL PyPkg
@@ -101,39 +104,66 @@ Function InstallLatestPython
 FunctionEnd
 
 ; Helper function to search a registry path for Python InstallPath
-Function SearchRegistry
-    ; Pop the root key from the stack into $1
-    Pop $1
-    MessageBox MB_OK "$1"
-
-    ; Input: $RegKey should be set to either HKLM or HKCU
+Function SearchRegistryForPython
     ClearErrors
-    ;Var /GLOBAL InstallPath
 
     ; Initialize version index
     StrCpy $VersionIndex 0
-
+    
+    ; A machine might have multiple Python versions.
+    ; Use the highest possible version.
+    StrCpy $PythonVerMajor 0
+    StrCpy $PythonVerMinor 0
     loop:
         ; Enumerate subkeys (Python versions)
-        ${If} $1 == "HKCU"
+        ${If} $5 == "HKCU"
             EnumRegKey $PythonVersion HKCU Software\Python\PythonCore $VersionIndex
         ${Else}
             EnumRegKey $PythonVersion HKLM Software\Python\PythonCore $VersionIndex
         ${EndIf}        
         
+        ; Reached the end.
         ${If} ${Errors}
             ; No more subkeys, exit loop
             Return
         ${EndIf}
-
+        
         ; Increment version index for next iteration
         IntOp $VersionIndex $VersionIndex + 1
         
-        MessageBox MB_OK $PythonVersion 
+        ; Not likely -- safe-guard.
+        ${If} $VersionIndex >= 100
+            Return
+        ${EndIf}
+        
+        ; Skip if this version is less than prior found.
+        StrCpy $0 "$PythonVersion"
+        StrCpy $1 "."
+        
+        ; Compare major version.
+        StrCpy $2 "0" ; List split offset 0.
+        ${StrTok} $3 $0 $1 $2 "1" ; Split by .
+        IntFmt $3 "%d" $3 ; int()
+        ${If} $3 < $PythonVerMajor
+            Goto loop
+        ${EndIf}
+        StrCpy $4 "$3" ; Save it.
+        
+        ; Compare minor version.
+        StrCpy $2 "1" ; List split offset 1.
+        ${StrTok} $3 $0 $1 $2 "1" ; Split by .
+        IntFmt $3 "%d" $3 ; int()
+        ${If} $3 < $PythonVerMinor
+            Goto loop
+        ${EndIf}
+        
+        ; Otherwise save them.
+        StrCpy $PythonVerMajor "$4"
+        StrCpy $PythonVerMinor "$3"
 
         ; Try to read the InstallPath for this version
         ClearErrors
-        ${If} $1 == "HKCU"
+        ${If} $5 == "HKCU"
             ReadRegStr $InstallPath HKCU Software\Python\PythonCore\$PythonVersion\InstallPath ""
         ${Else}
             ReadRegStr $InstallPath HKLM Software\Python\PythonCore\$PythonVersion\InstallPath ""
@@ -146,30 +176,26 @@ Function SearchRegistry
 
         ; If InstallPath is found, set PythonPath and exit
         StrCpy $PythonPath $InstallPath
-        MessageBox MB_OK $PythonPath
         Return
 
     Goto loop
 FunctionEnd
 
 Function GetPythonPath
-    ; Declare temporary variables
-    Var /GLOBAL RegKey
-
     ; Initialize $0 to an empty string
     StrCpy $0 ""
 
     ; Search HKEY_LOCAL_MACHINE
-    Push "HKLM"
-    Call SearchRegistry
+    StrCpy $5 "HKLM"
+    Call SearchRegistryForPython
     ${If} $PythonPath != ""
         ; Found PythonPath in HKLM
         Return
     ${EndIf}
 
     ; Search HKEY_CURRENT_USER
-    Push "HKCU"
-    Call SearchRegistry
+    StrCpy $5 "HKCU"
+    Call SearchRegistryForPython
     ${If} $PythonPath != ""
         ; Found PythonPath in HKCU
         Return
