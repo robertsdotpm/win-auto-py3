@@ -25,3 +25,16 @@ The base URL for the installer is part of the EXE's file description field. Modi
 # How it works
 
 Nullsoft, Inc, the company that created the goated and much loved Winamp also wrote another program that is incredibly under-rated. It's an installer system for Windows that offers support for Windows 95 to Windows 11 (including server versions.) I wrote a simple downloader for Python and make the installer itself the input system. This means that you can create a portable, single EXE for any Python package by renaming a file.
+
+# Building this installer
+
+You don't need to do this to use the installer. But for development:
+
+1. Install NSIS.
+2. In this repo go to nsis.
+3. Copy the plugins to the right program files x86/nsis folder.
+4. Repeat that process for the includes.
+5. Open NSIS and go to compile a script.
+6. Select installer.nsi.
+
+Make sure that if you clone the repo your OS hasn't 'blocked' the DLL files for the plugins. Otherwise you won't be able to build the installer.
