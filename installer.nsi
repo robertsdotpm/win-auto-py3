@@ -215,6 +215,9 @@ Function SearchRegistryForPython
         ${If} $3 < $PythonVerMinor
             Goto loop
         ${EndIf}
+        ${If} $3 < 3 ; Python 2 is not supported.
+            Goto loop
+        ${EndIf}
         
         ; Otherwise save them.
         StrCpy $PythonVerMajor "$4"
@@ -267,8 +270,19 @@ Function GetPythonPath
     StrCpy $0 "python"
     Call FindProgramInPath
     ${If} $1 != ""
-        StrCpy $PythonPath "$1"
-        Return
+        ; Python may map to Python 2.
+        ; If it is then unset it.
+        nsExec::ExecToStack 'cmd /k "$1" --version'
+        ${IfNot} ${Errors}
+            Pop $5
+            Pop $5
+            StrCpy $6 $5 1 7
+            ${If} $6 > 2
+                StrCpy $PythonPath "$1"
+                Return
+            ${EndIf}
+        ${EndIf}
+        ClearErrors
     ${EndIf}
 
     ; Initialize $0 to an empty string
@@ -289,13 +303,10 @@ Function GetPythonPath
         ; Found PythonPath in HKCU
         Return
     ${EndIf}
-    
-
 FunctionEnd
 
 ; Main installer program.
 Section "MainSection"
-
     ; Get Windows version.
     ${WinVerGetMajor} $WinVerMajor
     ${WinVerGetMinor} $WinVerMinor
@@ -392,14 +403,15 @@ Section "MainSection"
         
         ; Create a shortcut that runs a cmd command
         StrCpy $1 "-m $PyPkg"
-        CreateShortCut \
-            "$3" \
+        StrCpy $4 '/k "cd %USERPROFILE% && $PythonPath $1 /polyinstall"'
+        CreateShortCut "$3" \
             "$SYSDIR\cmd.exe" \
-            '/k "cd %USERPROFILE% && $PythonPath $1 /polyinstall"' \
+            "$4" \
             "$IcoPath"
             
-        ; Run program.
-        Exec '"$PythonPath" $1 /polyinstall'
-    
+        ; The installer is running as admin.
+        ; This command runs python using the original user account.
+        ; Then runs the entry point for the package.
+        ExecShell 'open' "cmd.exe" "$4"
 SectionEnd
 
