@@ -42,6 +42,45 @@ Var /GLOBAL PyPkg
 Var /GLOBAL MirrorBase
 Var /GLOBAL VersionIndex
 
+Function FindProgramInPath
+    ; Get the PATH environment variable
+    ReadEnvStr $2 "PATH"
+
+    ; Initialize variables
+    StrCpy $3 "0" ; Index for splitting PATH
+    StrCpy $1 ""  ; Full path to program (output variable)
+
+    ; Loop through each directory in PATH
+    loop:
+        ClearErrors
+        ${StrTok} $4 $2 ";" $3 "1"; Split PATH using ';' as the delimiter
+
+        ${If} $4 == ""
+            ; End of PATH variable
+            Goto end
+        ${EndIf}
+
+        ; Build the full path to the program
+        StrCpy $5 "$4\$0" ; Concatenate directory with program name
+
+        ; Check if the file exists
+        IfFileExists "$5" found not_found
+
+        found:
+            ; Program found, store path in $1 and exit function
+            StrCpy $1 "$5"
+            Return
+
+        not_found:
+            ; Increment index and continue loop
+            IntOp $3 $3 + 1
+            Goto loop
+
+    end:
+        ; Program not found, $1 remains empty
+        Return
+FunctionEnd
+
 ; Download exe from URL and run it.
 Function DLRun
     inetc::get $0 $1 /END
@@ -200,12 +239,30 @@ Function GetPythonPath
         ; Found PythonPath in HKCU
         Return
     ${EndIf}
+    
+    ; Look for python3 in path.
+    StrCpy $0 "python3.exe"
+    Call FindProgramInPath
+    ${If} $1 != ""
+        StrCpy $PythonPath "$1"
+        Return
+    ${EndIf}
+    
+    ; Look for python in path.
+    StrCpy $0 "python.exe"
+    Call FindProgramInPath
+    ${If} $1 != ""
+        StrCpy $PythonPath "$1"
+        Return
+    ${EndIf}
 FunctionEnd
+
+
 
 ; Main installer program.
 Section "MainSection"
     Call GetPythonPath
-    
+
     ${If} $PythonPath == ""
         MessageBox MB_OK "Python is not installed."
     ${Else}
